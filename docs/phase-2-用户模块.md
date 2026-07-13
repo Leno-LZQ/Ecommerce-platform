@@ -1,8 +1,9 @@
 # 阶段 2：用户模块 + 安全体系实施方案
 
-> **目标：** 实现注册/登录/JWT双Token/权限控制/AOP日志，完成 user-service 全部功能。  
+> **目标：** 实现注册/登录/JWT双Token/权限控制/AOP日志，完成 user-service 全部功能。支持 5 种角色（ADMIN/USER/MERCHANT/CS_AGENT/CS_MANAGER）。  
 > **预计工时：** 20~25 小时  
 > **前置：** 阶段 1 基础设施全部就绪  
+> **对齐版本**：《系统设计完整报告》v3.0  
 
 ---
 

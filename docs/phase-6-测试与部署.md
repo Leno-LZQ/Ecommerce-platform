@@ -1,8 +1,9 @@
 # 阶段 6：全量测试 + 可观测性 + CI/CD + 部署实施方案
 
-> **目标：** 四层测试体系全覆盖，ELK + Prometheus + Grafana 可观测性搭建，GitHub Actions 完整 CI/CD 流水线带质量门禁，Docker 蓝绿部署。  
+> **目标：** 四层测试体系全覆盖（15 服务），ELK + Prometheus + Grafana 可观测性搭建，GitHub Actions 完整 CI/CD 流水线带质量门禁，Docker 蓝绿部署。  
 > **预计工时：** 25~30 小时  
 > **前置：** 阶段 5 全部完成  
+> **对齐版本**：《系统设计完整报告》v3.0（15 服务 / 46 表 / 含 WebSocket 压测 / 消息+客服+推荐专项测试）  
 
 ---
 
