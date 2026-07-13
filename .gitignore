@@ -107,7 +107,7 @@ $RECYCLE.BIN/
 # WorkBuddy（保留 memory 目录）
 # ========================================
 .workbuddy/*
-!.workbuddy/memory/
+.workbuddy/memory/
 
 # ========================================
 # 临时文件

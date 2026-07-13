@@ -1,8 +1,9 @@
 # 阶段 1：项目脚手架与基础设施实施方案
 
-> **目标：** 搭建 Gradle 多模块工程，Docker 一键启动全部中间件，完成 12 张核心表建表。  
-> **预计工时：** 15~20 小时  
+> **目标：** 搭建 Gradle 多模块工程（15 个模块），Docker 一键启动全部中间件，初始化 44 张核心表。  
+> **预计工时：** 20~25 小时  
 > **前置：** 阶段 0 环境准备全部完成  
+> **对齐版本**：《系统设计完整报告》v3.0（15 服务 / 46 表 / 14 周路线图）  
 
 ---
 
@@ -15,22 +16,40 @@
 ```
 D:\code\MyProject\Ecommerce-platform/             ← 项目根目录
 ├── docker/                          ← Docker Compose 编排文件
-│   └── mysql/init.sql
+│   ├── docker-compose.yml
+│   └── mysql/init.sql               ← 44 张表完整建表脚本
 ├── docs/                            ← 项目文档
+│   ├── 系统设计完整报告.md
+│   ├── 数据库设计文档.md
+│   ├── phase-0-环境准备.md
+│   ├── phase-1-项目脚手架.md
+│   ├── phase-2-用户模块.md
+│   ├── phase-3-商品模块.md
+│   ├── phase-4-订单模块.md
+│   ├── phase-5-支付与前端.md
+│   └── phase-6-测试与部署.md
+├── .github/                         ← CI/CD 工作流
 └── High-concurrency-ecommerce/      ← Gradle 多模块代码根目录
     ├── common/                      ← Java 库，无 main 方法
-    ├── user-service/                ← Spring Boot 服务 (8081)
-    ├── product-service/             ← Spring Boot 服务 (8082)
-    ├── cart-service/                ← Spring Boot 服务 (8083)
-    ├── order-service/               ← Spring Boot 服务 (8084)
-    ├── payment-service/             ← Spring Boot 服务 (8085)
-    ├── inventory-service/           ← Spring Boot 服务 (8086)
-    ├── gateway/                     ← Spring Cloud Gateway (8080)
-    ├── admin-service/               ← Spring Boot 服务 (8087)
+    ├── gateway/                     ← Spring Cloud Gateway :8080
+    ├── user-service/                ← :8081 用户认证授权
+    ├── product-service/             ← :8082 商品目录
+    ├── inventory-service/           ← :8083 库存管理
+    ├── cart-service/                ← :8084 购物车
+    ├── order-service/               ← :8085 订单编排
+    ├── payment-service/             ← :8086 支付处理
+    ├── search-service/              ← :8087 ES 全文搜索
+    ├── merchant-service/            ← :8088 商家入驻管理
+    ├── settlement-service/          ← :8089 结算财务
+    ├── admin-service/               ← :8090 BFF 管理端聚合
+    ├── promotion-service/           ← :8091 优惠策略引擎
+    ├── message-service/             ← :8092 实时消息通信 (WebSocket)
+    ├── cs-service/                  ← :8093 官方客服工单 (WebSocket)
+    ├── recommendation-service/      ← :8094 智能推荐引擎
     ├── settings.gradle.kts
     ├── build.gradle.kts
     ├── gradle.properties
-    └── gradlew / gradlew.bat        ← IDEA 自动生成
+    └── gradlew / gradlew.bat
 ```
 
 ---
@@ -86,14 +105,19 @@ D:\code\MyProject\Ecommerce-platform/             ← 项目根目录
 
 ---
 
-### Step 4：创建 8 个 Spring Boot 服务模块（批量操作）
+### Step 4：创建 14 个 Spring Boot 服务模块（批量操作）
 
-重复以下步骤 7 次，分别创建各业务服务 + gateway（共 8 个）：
+重复以下步骤 14 次，分别创建各业务服务 + gateway（共 14 个）：
 
 1. 右键根项目 → **New → Module…**
 2. 左侧选 **Spring Boot**（或 Gradle → Java）
-3. **Name** 依次填：`user-service` / `product-service` / `cart-service` / `order-service` / `payment-service` / `inventory-service` / `gateway` / `admin-service`
-4. 依赖选择：都勾选 **Spring Web**（后续手动调整）
+3. **Name** 依次填：
+   `gateway` / `user-service` / `product-service` / `inventory-service` /
+   `cart-service` / `order-service` / `payment-service` / `search-service` /
+   `merchant-service` / `settlement-service` / `admin-service` /
+   `promotion-service` / `message-service` / `cs-service` /
+   `recommendation-service`
+4. 依赖选择：都勾选 **Spring Web**；gateway 勾选 **Gateway**；message-service 和 cs-service 勾选 **Spring Reactive Web**
 5. 点击 **Create**
 
 > **快速技巧：** 创建第一个 `user-service` 后，右键该模块 → **Copy Configuration** → 改名称 → 重复创建剩下的，不必每次都从头选依赖。
@@ -119,14 +143,21 @@ rootProject.name = "High-concurrency-ecommerce"
 
 include(
     "common",
+    "gateway",
     "user-service",
     "product-service",
+    "inventory-service",
     "cart-service",
     "order-service",
     "payment-service",
-    "inventory-service",
-    "gateway",
-    "admin-service"
+    "search-service",
+    "merchant-service",
+    "settlement-service",
+    "admin-service",
+    "promotion-service",
+    "message-service",
+    "cs-service",
+    "recommendation-service"
 )
 ```
 
@@ -219,6 +250,12 @@ plugins {
 dependencies {
     // Spring Web（提供 Validation、JSON 等）
     api("org.springframework.boot:spring-boot-starter-web")
+
+    // Spring WebFlux（Reactive WebSocket 用于 message/cs 服务）
+    api("org.springframework.boot:spring-boot-starter-webflux")
+
+    // OpenFeign（服务间 RPC 调用）
+    api("org.springframework.cloud:spring-cloud-starter-openfeign")
 
     // Hutool 工具
     api("cn.hutool:hutool-all:${property("hutoolVersion")}")
@@ -607,279 +644,23 @@ docker compose -f docker/docker-compose.yml logs -f nacos
 
 ## 1.5 数据库建表
 
-### 创建初始化脚本
+> **数据库初始化脚本已独立为 `docker/mysql/init.sql`**，包含完整的 44 张表 DDL + 外键约束 + 索引 + 种子数据。本节仅说明如何使用该脚本。
 
-```sql
--- docker/mysql/init.sql
+### 脚本概览
 
-CREATE DATABASE IF NOT EXISTS ecommerce
-  DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-USE ecommerce;
-
--- ========================================
--- 1. 用户表
--- ========================================
-CREATE TABLE IF NOT EXISTS `user` (
-    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '用户ID',
-    `username`    VARCHAR(50)  NOT NULL COMMENT '用户名',
-    `password`    VARCHAR(255) NOT NULL COMMENT '加密密码',
-    `phone`       VARCHAR(20)  DEFAULT NULL COMMENT '手机号',
-    `email`       VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
-    `nickname`    VARCHAR(50)  DEFAULT NULL COMMENT '昵称',
-    `avatar`      VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
-    `status`      TINYINT      DEFAULT 1 COMMENT '状态: 1正常 0禁用',
-    `deleted`     TINYINT      DEFAULT 0 COMMENT '逻辑删除',
-    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_username` (`username`),
-    UNIQUE KEY `uk_phone` (`phone`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
-
--- ========================================
--- 2. 角色表
--- ========================================
-CREATE TABLE IF NOT EXISTS `role` (
-    `id`          BIGINT      NOT NULL AUTO_INCREMENT,
-    `name`        VARCHAR(50) NOT NULL COMMENT '角色名称',
-    `description` VARCHAR(255) DEFAULT NULL,
-    `create_time` DATETIME    DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色表';
-
--- ========================================
--- 3. 用户角色关联表
--- ========================================
-CREATE TABLE IF NOT EXISTS `user_role` (
-    `id`      BIGINT NOT NULL AUTO_INCREMENT,
-    `user_id` BIGINT NOT NULL,
-    `role_id` BIGINT NOT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_role` (`user_id`, `role_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户角色关联表';
-
--- ========================================
--- 4. 权限表
--- ========================================
-CREATE TABLE IF NOT EXISTS `permission` (
-    `id`          BIGINT      NOT NULL AUTO_INCREMENT,
-    `name`        VARCHAR(100) NOT NULL COMMENT '权限标识',
-    `description` VARCHAR(255) DEFAULT NULL,
-    `create_time` DATETIME    DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='权限表';
-
--- ========================================
--- 5. 角色权限关联表
--- ========================================
-CREATE TABLE IF NOT EXISTS `role_permission` (
-    `id`            BIGINT NOT NULL AUTO_INCREMENT,
-    `role_id`       BIGINT NOT NULL,
-    `permission_id` BIGINT NOT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_role_perm` (`role_id`, `permission_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色权限关联表';
-
--- ========================================
--- 6. 商品分类表
--- ========================================
-CREATE TABLE IF NOT EXISTS `category` (
-    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
-    `name`        VARCHAR(100) NOT NULL COMMENT '分类名称',
-    `parent_id`   BIGINT       DEFAULT 0 COMMENT '父分类ID',
-    `sort_order`  INT          DEFAULT 0 COMMENT '排序',
-    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品分类表';
-
--- ========================================
--- 7. 商品表
--- ========================================
-CREATE TABLE IF NOT EXISTS `product` (
-    `id`          BIGINT         NOT NULL AUTO_INCREMENT,
-    `name`        VARCHAR(200)   NOT NULL COMMENT '商品名称',
-    `description` TEXT           COMMENT '商品描述',
-    `category_id` BIGINT         NOT NULL COMMENT '分类ID',
-    `price`       DECIMAL(10,2)  NOT NULL COMMENT '单价',
-    `stock`       INT            NOT NULL DEFAULT 0 COMMENT '库存',
-    `image`       VARCHAR(500)   DEFAULT NULL COMMENT '主图URL',
-    `sales`       INT            DEFAULT 0 COMMENT '销量',
-    `status`      TINYINT        DEFAULT 1 COMMENT '状态: 1上架 0下架',
-    `deleted`     TINYINT        DEFAULT 0,
-    `create_time` DATETIME       DEFAULT CURRENT_TIMESTAMP,
-    `update_time` DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    KEY `idx_category` (`category_id`),
-    KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表';
-
--- ========================================
--- 8. 商品 SKU 表
--- ========================================
-CREATE TABLE IF NOT EXISTS `product_sku` (
-    `id`          BIGINT         NOT NULL AUTO_INCREMENT,
-    `product_id`  BIGINT         NOT NULL COMMENT '商品ID',
-    `attrs`       VARCHAR(200)   NOT NULL COMMENT '规格属性(JSON)',
-    `price`       DECIMAL(10,2)  NOT NULL COMMENT 'SKU价格',
-    `stock`       INT            NOT NULL DEFAULT 0 COMMENT 'SKU库存',
-    `version`     INT            DEFAULT 0 COMMENT '乐观锁版本号',
-    `create_time` DATETIME       DEFAULT CURRENT_TIMESTAMP,
-    `update_time` DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    KEY `idx_product` (`product_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品SKU表';
-
--- ========================================
--- 9. 订单表
--- ========================================
-CREATE TABLE IF NOT EXISTS `orders` (
-    `id`            BIGINT         NOT NULL AUTO_INCREMENT,
-    `order_no`      VARCHAR(32)    NOT NULL COMMENT '订单号',
-    `user_id`       BIGINT         NOT NULL COMMENT '用户ID',
-    `total_amount`  DECIMAL(12,2)  NOT NULL COMMENT '总金额',
-    `pay_amount`    DECIMAL(12,2)  NOT NULL COMMENT '实付金额',
-    `status`        TINYINT        NOT NULL DEFAULT 0 COMMENT '0待支付 1已支付 2已发货 3已收货 4已完成 5已取消 6已退款',
-    `pay_type`      TINYINT        DEFAULT NULL COMMENT '支付方式',
-    `pay_time`      DATETIME       DEFAULT NULL COMMENT '支付时间',
-    `consignee`     VARCHAR(50)    DEFAULT NULL COMMENT '收货人',
-    `phone`         VARCHAR(20)    DEFAULT NULL COMMENT '收货电话',
-    `address`       VARCHAR(255)   DEFAULT NULL COMMENT '收货地址',
-    `remark`        VARCHAR(500)   DEFAULT NULL COMMENT '备注',
-    `cancel_reason` VARCHAR(255)   DEFAULT NULL COMMENT '取消原因',
-    `deleted`       TINYINT        DEFAULT 0,
-    `create_time`   DATETIME       DEFAULT CURRENT_TIMESTAMP,
-    `update_time`   DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_order_no` (`order_no`),
-    KEY `idx_user_id` (`user_id`),
-    KEY `idx_status` (`status`),
-    KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';
-
--- ========================================
--- 10. 订单明细表
--- ========================================
-CREATE TABLE IF NOT EXISTS `order_item` (
-    `id`           BIGINT         NOT NULL AUTO_INCREMENT,
-    `order_no`     VARCHAR(32)    NOT NULL COMMENT '订单号',
-    `product_id`   BIGINT         NOT NULL COMMENT '商品ID',
-    `sku_id`       BIGINT         DEFAULT NULL,
-    `product_name` VARCHAR(200)   NOT NULL COMMENT '商品名称快照',
-    `product_image` VARCHAR(500)  DEFAULT NULL,
-    `sku_attrs`    VARCHAR(200)   DEFAULT NULL,
-    `price`        DECIMAL(10,2)  NOT NULL COMMENT '购买单价',
-    `quantity`     INT            NOT NULL COMMENT '购买数量',
-    `subtotal`     DECIMAL(12,2)  NOT NULL COMMENT '小计',
-    `create_time`  DATETIME       DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    KEY `idx_order_no` (`order_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单明细表';
-
--- ========================================
--- 11. 支付流水表
--- ========================================
-CREATE TABLE IF NOT EXISTS `payment` (
-    `id`            BIGINT         NOT NULL AUTO_INCREMENT,
-    `pay_no`        VARCHAR(32)    NOT NULL COMMENT '支付流水号',
-    `order_no`      VARCHAR(32)    NOT NULL COMMENT '关联订单号',
-    `user_id`       BIGINT         NOT NULL COMMENT '用户ID',
-    `total_amount`  DECIMAL(12,2)  NOT NULL COMMENT '支付金额',
-    `pay_type`      TINYINT        DEFAULT 1 COMMENT '支付方式',
-    `status`        TINYINT        DEFAULT 0 COMMENT '0待支付 1成功 2失败 3已退款',
-    `callback_time` DATETIME       DEFAULT NULL COMMENT '回调时间',
-    `create_time`   DATETIME       DEFAULT CURRENT_TIMESTAMP,
-    `update_time`   DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_pay_no` (`pay_no`),
-    KEY `idx_order_no` (`order_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付流水表';
-
--- ========================================
--- 13. 评价表（新增）
--- ========================================
-CREATE TABLE IF NOT EXISTS `review` (
-    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
-    `product_id`  BIGINT       NOT NULL COMMENT '商品ID',
-    `sku_id`      BIGINT       DEFAULT NULL COMMENT 'SKU ID',
-    `order_no`    VARCHAR(32)  NOT NULL COMMENT '关联订单号',
-    `user_id`     BIGINT       NOT NULL COMMENT '评价用户ID',
-    `score`       TINYINT      NOT NULL COMMENT '评分(1~5)',
-    `content`     VARCHAR(1000) DEFAULT NULL COMMENT '评价内容',
-    `images`      VARCHAR(1000) DEFAULT NULL COMMENT '晒图(JSON数组)',
-    `status`      TINYINT      DEFAULT 0 COMMENT '0待审核 1通过 2拒绝',
-    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    KEY `idx_product` (`product_id`),
-    KEY `idx_order_no` (`order_no`),
-    KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品评价表';
-
--- ========================================
--- 14. 到货通知表（新增，可选——用 Redis Set 订阅更轻量）
--- ========================================
-CREATE TABLE IF NOT EXISTS `stock_notification` (
-    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
-    `sku_id`      BIGINT       NOT NULL COMMENT 'SKU ID',
-    `user_id`     BIGINT       NOT NULL COMMENT '订阅用户ID',
-    `notified`    TINYINT      DEFAULT 0 COMMENT '0未通知 1已通知',
-    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_sku_user` (`sku_id`, `user_id`),
-    KEY `idx_sku_notified` (`sku_id`, `notified`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='到货通知订阅表';
-CREATE TABLE IF NOT EXISTS `order_message` (
-    `id`           BIGINT       NOT NULL AUTO_INCREMENT,
-    `order_no`     VARCHAR(32)  NOT NULL,
-    `message_body` TEXT         NOT NULL COMMENT '消息体(JSON)',
-    `exchange`     VARCHAR(100) NOT NULL COMMENT '目标交换机',
-    `routing_key`  VARCHAR(100) NOT NULL COMMENT '路由键',
-    `status`       TINYINT      DEFAULT 0 COMMENT '0待发送 1已发送 2已确认 3已失败',
-    `retry_count`  INT          DEFAULT 0 COMMENT '重试次数',
-    `max_retry`    INT          DEFAULT 3,
-    `create_time`  DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    `update_time`  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    KEY `idx_status` (`status`),
-    KEY `idx_order_no` (`order_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='本地消息表';
-
--- ========================================
--- 初始化角色和权限数据
--- ========================================
-INSERT INTO `role` (`name`, `description`) VALUES
-('ROLE_ADMIN', '管理员'),
-('ROLE_USER', '普通用户');
-
-INSERT INTO `permission` (`name`, `description`) VALUES
-('product:list', '查看商品列表'),
-('product:create', '创建商品'),
-('product:update', '修改商品'),
-('product:delete', '删除商品'),
-('order:list', '查看订单列表'),
-('order:detail', '查看订单详情'),
-('order:ship', '订单发货'),
-('user:list', '查看用户列表'),
-('user:manage', '管理用户');
-
--- 管理员拥有全部权限
-INSERT INTO `role_permission` (`role_id`, `permission_id`)
-SELECT 1, id FROM permission;
-
--- 普通用户只有查看权限
-INSERT INTO `role_permission` (`role_id`, `permission_id`)
-SELECT 2, id FROM permission WHERE name IN ('product:list', 'order:list', 'order:detail');
-
--- 初始化测试分类
-INSERT INTO `category` (`name`, `parent_id`, `sort_order`) VALUES
-('电子产品', 0, 1),
-('服装', 0, 2),
-('食品', 0, 3),
-('手机', 1, 1),
-('电脑', 1, 2);
-```
+| 域 | 表数 | 包含表 |
+|:---|:---:|:-----|
+| 用户权限 | 6 | user, role, permission, user_role, role_permission, user_address |
+| 商品体系 | 6 | category, product, product_sku, cart_item, review, stock_notification |
+| 订单体系 | 4 | orders, order_item, order_split, order_message |
+| 支付体系 | 1 | payment |
+| 商家体系 | 5 | merchant, merchant_settlement, merchant_audit_log, merchant_sub_account, merchant_qualification |
+| 促销引擎 | 8 | coupon_template, coupon_user, order_coupon, promotion_activity, promotion_rule, promotion_scope, seckill_activity, user_coupon_tag |
+| 结算财务 | 3 | commission_rule, settlement_bill, settlement_detail |
+| 消息通信 | 3 | conversation, message, push_record |
+| 客服工单 | 4 | ticket, ticket_message, ticket_audit_log, cs_agent |
+| 推荐引擎 | 4 | user_behavior（分区表）, reco_result, product_similarity, reco_strategy |
+| **合计** | **44** | |
 
 ### 初始化数据库
 
@@ -889,6 +670,14 @@ INSERT INTO `category` (`name`, `parent_id`, `sort_order`) VALUES
 
 # 方式 2：手动执行（如果之前已有 MySQL 容器）
 docker exec -i ecommerce-mysql mysql -uroot -proot123 ecommerce < docker/mysql/init.sql
+
+# 验证
+docker exec -it ecommerce-mysql mysql -uroot -proot123 -e "
+  SELECT TABLE_NAME, TABLE_COMMENT
+  FROM information_schema.TABLES
+  WHERE TABLE_SCHEMA='ecommerce'
+  ORDER BY TABLE_NAME;"
+# 预期：列出 44 张表
 ```
 
 ---
@@ -1077,13 +866,35 @@ public enum ErrorCode {
     RATE_LIMITED(50001, "系统繁忙，请稍后重试（限流中）"),
     SERVICE_UNAVAILABLE(50002, "服务暂不可用"),
 
-    // 评价模块 60000~69999（新增）
+    // 评价模块 60000~69999
     REVIEW_DUPLICATE(60001, "您已评价过该商品"),
     REVIEW_ORDER_NOT_COMPLETED(60002, "仅已完成订单可评价"),
     REVIEW_SCORE_INVALID(60003, "评分须在 1~5 之间"),
 
-    // WebSocket / 通知（新增）
-    NOTIFICATION_SEND_FAILED(70001, "消息推送失败");
+    // WebSocket / 消息通信 70000~79999
+    NOTIFICATION_SEND_FAILED(70001, "消息推送失败"),
+    CONVERSATION_NOT_FOUND(70002, "会话不存在"),
+    MESSAGE_SEND_TOO_FAST(70003, "消息发送过于频繁"),
+
+    // 客服工单 80000~89999
+    TICKET_NOT_FOUND(80001, "工单不存在"),
+    TICKET_STATUS_ERROR(80002, "工单状态异常"),
+    TICKET_SLA_TIMEOUT(80003, "工单处理超时"),
+    TICKET_LIMIT_EXCEEDED(80004, "工单创建过于频繁"),
+
+    // 推荐引擎 90000~99999
+    RECO_NOT_AVAILABLE(90001, "推荐服务暂不可用"),
+    RECO_COLD_START(90002, "暂无足够数据为您推荐"),
+
+    // 优惠/营销 110000~119999
+    COUPON_NOT_FOUND(110001, "优惠券不存在"),
+    COUPON_EXPIRED(110002, "优惠券已过期"),
+    COUPON_USED(110003, "优惠券已使用"),
+    COUPON_STOCK_OUT(110004, "优惠券已领完"),
+    COUPON_LIMIT_EXCEEDED(110005, "已达领券上限"),
+    PROMOTION_ENDED(110006, "活动已结束"),
+    SECKILL_STOCK_OUT(110007, "秒杀商品已售罄"),
+    PROMOTION_RULE_CONFLICT(110008, "优惠叠加规则冲突");
 
     private final int code;
     private final String message;
@@ -1608,12 +1419,16 @@ V2__init_data.sql         # 角色/权限/分类初始数据
 ### 验证清单
 
 ```bash
-# 1. 所有容器正常运行
+# 1. 所有容器正常运行（5个核心容器）
 docker ps
 # 预期：看到 mysql, redis, rabbitmq, nacos, sentinel 5 个容器
 
-# 2. MySQL 连接正常
-docker exec -it ecommerce-mysql mysql -uroot -proot123 -e "SELECT COUNT(*) FROM ecommerce.user"
+# 2. MySQL 连接正常（验证 44 张表）
+docker exec -it ecommerce-mysql mysql -uroot -proot123 -e "
+  SELECT COUNT(*) AS table_count
+  FROM information_schema.TABLES
+  WHERE TABLE_SCHEMA='ecommerce';"
+# 预期：table_count = 44
 
 # 3. Redis 连接正常
 docker exec -it ecommerce-redis redis-cli PING
@@ -1629,24 +1444,47 @@ docker exec -it ecommerce-redis redis-cli PING
 # 打开 http://localhost:8858（sentinel/sentinel）
 ```
 
+### Nacos 微服务注册预览
+
+全部 16 个模块启动后，Nacos 服务列表应显示：
+
+| 服务名 | 实例数 | 端口 |
+|:-------|:---:|:---:|
+| gateway | 1 | 8080 |
+| user-service | 1 | 8081 |
+| product-service | 1 | 8082 |
+| inventory-service | 1 | 8083 |
+| cart-service | 1 | 8084 |
+| order-service | 1 | 8085 |
+| payment-service | 1 | 8086 |
+| search-service | 1 | 8087 |
+| merchant-service | 1 | 8088 |
+| settlement-service | 1 | 8089 |
+| admin-service | 1 | 8090 |
+| promotion-service | 1 | 8091 |
+| message-service | 1 | 8092 |
+| cs-service | 1 | 8093 |
+| recommendation-service | 1 | 8094 |
+
 ---
 
 ## 1.13 检查点
 
-- [ ] Gradle 多模块项目结构创建完毕
+- [ ] Gradle 多模块项目结构创建完毕（16 个模块：1 common + 1 gateway + 14 service）
 - [ ] `./gradlew build` 编译通过
 - [ ] **Checkstyle + JaCoCo + SonarQube 插件已配置**
 - [ ] **`.github/workflows/ci.yml` 已创建，CI 流水线可运行**
 - [ ] Docker 中间件（MySQL/Redis/RabbitMQ/Nacos/Sentinel）全部运行中
 - [ ] **所有 Docker 服务已添加 healthcheck + restart 策略**
 - [ ] Redis `maxmemory-policy allkeys-lru` 已配置
-- [ ] 14 张核心表已建好（支持 Flyway 迁移），初始化数据写入成功
-- [ ] Nacos 控制台可访问，公共配置（含 cache 段）已添加
-- [ ] `logback-spring.xml` 配置完毕，**含 JSON 格式输出**
-- [ ] Gateway `TraceIdFilter` 已实现，请求头透传 TraceId
-- [ ] `ErrorCode` 枚举已创建，`BusinessException` 已支持 ErrorCode 构造
+- [ ] **44 张核心表已建好**（docker/mysql/init.sql），初始化种子数据写入成功
+- [ ] Nacos 控制台可访问，公共配置已添加
+- [ ] `logback-spring.xml` 配置完毕，含 JSON 格式输出
+- [ ] Gateway `TraceIdFilter` 已实现
+- [ ] `ErrorCode` 枚举已创建（含消息/客服/推荐/优惠 100+ 个码值）
 - [ ] WebSocket 基础设施已搭建
-- [ ] IDEA 正确识别所有子模块，无红色错误
+- [ ] **OpenFeign + WebFlux 依赖已加入 common 模块**
+- [ ] IDEA 正确识别所有 16 个子模块，无红色错误
 
 ---
 

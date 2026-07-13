@@ -1,11 +1,20 @@
 rootProject.name = "High-concurrency-ecommerce"
 
-include("admin-service")
-include("cart-service")
-include("common")
-include("gateway")
-include("inventory-service")
-include("order-service")
-include("payment-service")
-include("product-service")
-include("user-service")
+include(
+    "common",
+    "gateway",
+    "user-service",
+    "product-service",
+    "inventory-service",
+    "cart-service",
+    "order-service",
+    "payment-service",
+    "search-service",
+    "merchant-service",
+    "settlement-service",
+    "admin-service",
+    "promotion-service",
+    "message-service",
+    "cs-service",
+    "recommendation-service"
+)

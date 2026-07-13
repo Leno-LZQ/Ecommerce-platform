@@ -165,7 +165,7 @@ https://dev.mysql.com/downloads/mysql/8.0.html
 ## 0.7 创建项目目录
 
 ```bash
-cd D:\study\java全栈开发\Java全栈技术项目
+cd D:\code\MyProject\Ecommerce-platform
 mkdir -p docker/mysql
 mkdir -p docs
 ```
@@ -339,3 +339,5 @@ Branches → Add branch protection rule (main):
 ## 0.11 下一步
 
 所有检查项打勾后，进入 **[阶段 1：项目脚手架与基础设施](./phase-1-项目脚手架.md)**。
+
+> **项目全局视角**：本项目共 5 个大阶段（14 周），涵盖 15 个微服务（含消息通信、官方客服、智能推荐三大引擎）、46 张数据表、13 个独立 Schema。完整路线图参见《系统设计完整报告》第八章。

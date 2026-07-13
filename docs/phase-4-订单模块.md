@@ -1,20 +1,24 @@
-# 阶段 4：购物车 + 订单核心链路实施方案
+# 阶段 4：购物车 + 订单核心链路 + 促销引擎实施方案
 
-> **目标：** Redis 购物车、下单流程（幂等/库存预扣/状态机）、RabbitMQ 延迟队列、MQ 分布式事务。  
-> **预计工时：** 25~35 小时（本阶段最重，建议拆成 1.5 周）  
+> **目标：** Redis 购物车、下单流程（幂等/库存预扣/优惠锁定/状态机）、RabbitMQ 延迟队列、MQ 分布式事务、多商家订单拆分。  
+> **预计工时：** 30~40 小时（本阶段最重，建议拆成 2 周）  
 > **前置：** 阶段 3 商品模块完成  
+> **对齐版本**：《系统设计完整报告》v3.0（含 order_split / discount_amount / promotion 锁定 / message 通知）  
 
 ---
 
 ## 4.1 模块划分
 
-本阶段涉及三个服务，按开发顺序：
+本阶段涉及四个服务，按开发顺序：
 
 ```
-1. cart-service    → 购物车（Redis Hash 实现，约 4 小时）
-2. order-service   → 订单核心（下单+状态机+延迟队列+分布式事务，约 18 小时）
-3. inventory-service → 库存扣减（复用阶段3的Lua脚本，约 3 小时）
+1. cart-service         → 购物车（Redis Hash 实现，约 4 小时）
+2. order-service        → 订单核心（下单+状态机+延迟队列+分布式事务+多商家拆分，约 20 小时）
+3. inventory-service    → 库存扣减（复用阶段3的Lua脚本，约 3 小时）
+4. promotion-service    → 促销引擎（优惠券+活动+秒杀+折扣计算+Redis锁券，约 10 小时）
 ```
+
+> **与 message-service 的集成点**：`order.paid` / `order.shipped` 事件 → 推送到 message-service → 用户-商家对话中显示系统消息（具体实现在 Phase 7）。
 
 ---
 

@@ -1,0 +1,113 @@
+services:
+  # ==========================================
+  # MySQL 8.0
+  # ==========================================
+  mysql:
+    image: mysql:8.0
+    container_name: ecommerce-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: ecommerce
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+            --character-set-server=utf8mb4
+            --collation-server=utf8mb4_unicode_ci
+
+  # ==========================================
+  # Redis 7.2
+  # ==========================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: ecommerce-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  # ==========================================
+  # RabbitMQ 3.13（含管理后台）
+  # ==========================================
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: ecommerce-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP 协议
+      - "15672:15672" # 管理后台
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+
+    depends_on:
+      mysql:
+        condition: service_started
+
+  # ==========================================
+  # Nacos 3.0（注册中心 + 配置中心）
+  # 使用内嵌 Derby 数据库，无需外部 MySQL
+  # ==========================================
+  nacos:
+    image: nacos/nacos-server:v3.0.3
+    container_name: ecommerce-nacos
+    ports:
+      - "8848:8848"
+      - "9848:9848"   # gRPC
+    environment:
+      MODE: standalone
+      NACOS_AUTH_TOKEN: "bmFjb3MtZGV2LXNlY3JldC1rZXktZm9yLXRva2VuLWdlbmVyYXRpb24tMDAx"
+      NACOS_AUTH_IDENTITY_KEY: "dev-identity"
+      NACOS_AUTH_IDENTITY_VALUE: "dev-identity-value"
+
+  # ==========================================
+  # Sentinel Dashboard
+  # ==========================================
+  sentinel:
+    image: bladex/sentinel-dashboard:1.8.9
+    container_name: ecommerce-sentinel
+    ports:
+      - "8858:8858"
+    environment:
+      JAVA_OPTS: "-Dserver.port=8858 -Dcsp.sentinel.dashboard.server=localhost:8858"
+    depends_on:
+      nacos:
+        condition: service_started
+
+  # ==========================================
+  # Elasticsearch 7.17
+  # ==========================================
+  elasticsearch:
+    image: elasticsearch:7.17.20
+    container_name: ecommerce-es
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    profiles:
+      - full
+
+  # Kibana
+  kibana:
+    image: kibana:7.17.20
+    container_name: ecommerce-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_started
+    profiles:
+      - full
+
+volumes:
+  mysql-data:
+  redis-data:
+  es-data:
