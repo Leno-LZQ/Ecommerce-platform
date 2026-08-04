@@ -4,33 +4,27 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":common"))
 
-    // Spring Boot
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.boot:spring-boot-starter-aop")
+    // Spring Cloud Gateway（Reactive 栈）
+    implementation("org.springframework.cloud:spring-cloud-starter-gateway")
 
-//    // Security（仅 user-service 需要）
-//    implementation("org.springframework.boot:spring-boot-starter-security")
-//
-//    // JWT
-//    implementation("io.jsonwebtoken:jjwt-api:${property("jjwtVersion")}")
-//    runtimeOnly("io.jsonwebtoken:jjwt-impl:${property("jjwtVersion")}")
-//    runtimeOnly("io.jsonwebtoken:jjwt-jackson:${property("jjwtVersion")}")
-//
-//    // MyBatis-Plus + MySQL
-//    implementation("com.baomidou:mybatis-plus-spring-boot3-starter:${property("mybatisPlusVersion")}")
-//    runtimeOnly("com.mysql:mysql-connector-j")
-//
-//    // Redis + Redisson
-//    implementation("org.springframework.boot:spring-boot-starter-data-redis")
-//    implementation("org.redisson:redisson-spring-boot-starter:${property("redissonVersion")}")
-//
-//    // Nacos
-//    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery:${property("springCloudAlibabaVersion")}")
-//    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config:${property("springCloudAlibabaVersion")}")
-//
-//    // Sentinel（按需添加）
-//    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel:${property("springCloudAlibabaVersion")}")
+    // Nacos 服务发现 + 配置中心
+    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery")
+    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config")
+
+    // Sentinel 限流（Gateway 适配版）
+    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel")
+    implementation("com.alibaba.cloud:spring-cloud-alibaba-sentinel-gateway")
+
+    // Redis（Token 黑名单 + WebSocket 会话）
+    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+
+
+    // 链路追踪
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-tracing-bridge-brave")
+
+    implementation("org.springframework.cloud:spring-cloud-starter-loadbalancer")
+
 }

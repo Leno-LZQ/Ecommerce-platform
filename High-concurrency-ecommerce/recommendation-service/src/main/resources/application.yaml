@@ -1,3 +1,22 @@
 spring:
   application:
     name: recommendation-service
+  cloud:
+    nacos:
+      server-addr: localhost:8848
+      discovery:
+        namespace: d05d4af2-3d66-44cf-9b3c-9fe6ac0a7c87
+        group: DEFAULT_GROUP
+      config:
+        namespace: d05d4af2-3d66-44cf-9b3c-9fe6ac0a7c87
+        group: DEFAULT_GROUP
+        file-extension: yaml
+        shared-configs:
+          - data-id: ecommerce-common.yaml
+            group: DEFAULT_GROUP
+            refresh: true
+        import-check:
+          enabled: false
+  config:
+    import:
+      - nacos:recommendation-service.yaml?group=DEFAULT_GROUP

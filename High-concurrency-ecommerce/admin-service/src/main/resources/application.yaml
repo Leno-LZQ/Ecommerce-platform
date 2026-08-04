@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: admin-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        namespace: d05d4af2-3d66-44cf-9b3c-9fe6ac0a7c87
+      config:
+        server-addr: localhost:8848
+        namespace: d05d4af2-3d66-44cf-9b3c-9fe6ac0a7c87
+        file-extension: yaml
+  config:
+    import:
+      - optional:nacos:ecommerce-common.yaml
+      - optional:nacos:admin-service.yaml

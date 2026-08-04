@@ -16,7 +16,15 @@ services:
     command: --default-authentication-plugin=mysql_native_password
             --character-set-server=utf8mb4
             --collation-server=utf8mb4_unicode_ci
-
+  user-service:
+    environment:
+      PHONE_HMAC_KEY: ${PHONE_HMAC_KEY}
+      PHONE_AES_KEY:  ${PHONE_AES_KEY}
+  gateway:
+    volumes:
+      - ./docker/secrets:/etc/secrets:ro
+    environment:
+      JWT_PUBLIC_KEY: /etc/secrets/jwt-public.pem
   # ==========================================
   # Redis 7.2
   # ==========================================
