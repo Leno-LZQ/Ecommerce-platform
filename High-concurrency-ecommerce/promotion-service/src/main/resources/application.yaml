@@ -1,3 +1,16 @@
 spring:
   application:
     name: promotion-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        namespace: d05d4af2-3d66-44cf-9b3c-9fe6ac0a7c87
+      config:
+        server-addr: localhost:8848
+        namespace: d05d4af2-3d66-44cf-9b3c-9fe6ac0a7c87
+        file-extension: yaml
+  config:
+    import:
+      - optional:nacos:ecommerce-common.yaml      # 共享层：Redis/RabbitMQ/MyBatis-Plus/日志
+      - optional:nacos:promotion-service.yaml     # 服务层：端口/数据源/业务参数

@@ -7,30 +7,25 @@ dependencies {
     implementation(project(":common"))
 
     // Spring Boot
-    implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-aop")
+    implementation("org.springframework.boot:spring-boot-starter-amqp")
+    implementation("org.springframework.boot:spring-boot-starter-cache")
+    implementation("com.github.ben-manes.caffeine:caffeine:${property("caffeineVersion")}")
 
-//    // Security（仅 user-service 需要）
-//    implementation("org.springframework.boot:spring-boot-starter-security")
-//
-//    // JWT
-//    implementation("io.jsonwebtoken:jjwt-api:${property("jjwtVersion")}")
-//    runtimeOnly("io.jsonwebtoken:jjwt-impl:${property("jjwtVersion")}")
-//    runtimeOnly("io.jsonwebtoken:jjwt-jackson:${property("jjwtVersion")}")
-//
-//    // MyBatis-Plus + MySQL
-//    implementation("com.baomidou:mybatis-plus-spring-boot3-starter:${property("mybatisPlusVersion")}")
-//    runtimeOnly("com.mysql:mysql-connector-j")
-//
-//    // Redis + Redisson
-//    implementation("org.springframework.boot:spring-boot-starter-data-redis")
-//    implementation("org.redisson:redisson-spring-boot-starter:${property("redissonVersion")}")
-//
-//    // Nacos
-//    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery:${property("springCloudAlibabaVersion")}")
-//    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config:${property("springCloudAlibabaVersion")}")
-//
-//    // Sentinel（按需添加）
-//    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel:${property("springCloudAlibabaVersion")}")
+    // MyBatis-Plus + MySQL
+    implementation("com.baomidou:mybatis-plus-spring-boot3-starter:${property("mybatisPlusVersion")}")
+    runtimeOnly("com.mysql:mysql-connector-j")
+
+    // Redis + Redisson
+    implementation("org.redisson:redisson-spring-boot-starter:${property("redissonVersion")}")
+
+    // Nacos
+    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery:${property("springCloudAlibabaVersion")}")
+    implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config:${property("springCloudAlibabaVersion")}")
+
+    implementation("org.springframework.cloud:spring-cloud-starter-loadbalancer")
+    implementation("com.aliyun.oss:aliyun-sdk-oss:3.17.4")
+
+
 }

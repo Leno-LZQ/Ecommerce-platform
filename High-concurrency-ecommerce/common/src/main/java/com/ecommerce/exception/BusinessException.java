@@ -1,5 +1,6 @@
 package com.ecommerce.exception;
 
+import com.ecommerce.constant.ErrorCode;
 import lombok.Getter;
 
 @Getter
@@ -13,5 +14,10 @@ public class BusinessException extends RuntimeException{
 
     public BusinessException(String message){
         this(500,message);
+    }
+
+    public BusinessException(ErrorCode errorCode) {
+        super(errorCode.getMessage());
+        this.code = errorCode.getCode();
     }
 }

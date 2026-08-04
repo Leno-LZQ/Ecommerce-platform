@@ -72,6 +72,13 @@ public class GlobalExceptionHandler {
         return Result.error(500, "系统内部错误");
     }
 
+    // 方法级权限不足（@PreAuthorize 抛出的 AccessDeniedException）
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Result<?> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        log.warn("无权限访问: {}", ex.getMessage());
+        return Result.error(403, "没有访问权限");
+    }
     // 兜底异常
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
